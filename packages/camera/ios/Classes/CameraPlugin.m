@@ -232,7 +232,7 @@ FourCharCode const videoFormat = kCVPixelFormatType_32BGRA;
   if ([_captureDevice position] == AVCaptureDevicePositionFront) {
     connection.videoMirrored = YES;
   }
-  connection.videoOrientation = AVCaptureVideoOrientationPortrait;
+  connection.videoOrientation = AVCaptureVideoOrientationLandscapeRight;
   [_captureSession addInputWithNoConnections:_captureVideoInput];
   [_captureSession addOutputWithNoConnections:_captureVideoOutput];
   [_captureSession addConnection:connection];
