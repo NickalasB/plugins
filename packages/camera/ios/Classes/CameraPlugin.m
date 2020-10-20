@@ -668,7 +668,7 @@ FourCharCode const videoFormat = kCVPixelFormatType_32BGRA;
     [self setUpCaptureSessionForAudio];
   }
   _videoWriter = [[AVAssetWriter alloc] initWithURL:outputURL
-                                           fileType:AVFileTypeQuickTimeMovie
+                                           fileType:AVFileTypeMPEG4
                                               error:&error];
   NSParameterAssert(_videoWriter);
   if (error) {
@@ -677,8 +677,8 @@ FourCharCode const videoFormat = kCVPixelFormatType_32BGRA;
   }
   NSDictionary *videoSettings = [NSDictionary
       dictionaryWithObjectsAndKeys:AVVideoCodecH264, AVVideoCodecKey,
-                                   [NSNumber numberWithInt:_previewSize.height], AVVideoWidthKey,
-                                   [NSNumber numberWithInt:_previewSize.width], AVVideoHeightKey,
+                                   [NSNumber numberWithInt:_previewSize.height], AVVideoHeightKey,
+                                   [NSNumber numberWithInt:_previewSize.width], AVVideoWidthKey,
                                    nil];
   _videoWriterInput = [AVAssetWriterInput assetWriterInputWithMediaType:AVMediaTypeVideo
                                                          outputSettings:videoSettings];
@@ -690,6 +690,10 @@ FourCharCode const videoFormat = kCVPixelFormatType_32BGRA;
                                  }];
 
   NSParameterAssert(_videoWriterInput);
+    // Add orientation metadata.
+    CGFloat rotationDegrees = [self getDeviceRotation];
+    _videoWriterInput.transform = CGAffineTransformMakeRotation(rotationDegrees * M_PI / 180);
+
   _videoWriterInput.expectsMediaDataInRealTime = YES;
 
   // Add the audio input
@@ -746,6 +750,32 @@ FourCharCode const videoFormat = kCVPixelFormatType_32BGRA;
     }
   }
 }
+
+- (float)getDeviceRotation {
+  float const threshold = 45.0;
+  BOOL (^isNearValue)(float value1, float value2) = ^BOOL(float value1, float value2) {
+    return fabsf(value1 - value2) < threshold;
+  };
+  BOOL (^isNearValueABS)(float value1, float value2) = ^BOOL(float value1, float value2) {
+    return isNearValue(fabsf(value1), fabsf(value2));
+  };
+  float yxAtan = (atan2(_motionManager.accelerometerData.acceleration.y,
+                        _motionManager.accelerometerData.acceleration.x)) *
+                 180 / M_PI;
+  if (isNearValue(-90.0, yxAtan)) {
+    return 90;
+  } else if (isNearValueABS(180.0, yxAtan)) {
+    return 0;
+  } else if (isNearValueABS(0.0, yxAtan)) {
+    return 180;
+  } else if (isNearValue(90.0, yxAtan)) {
+    return 270;
+  }
+  // If none of the above, then the device is likely facing straight down or straight up -- just
+  // pick something arbitrary
+  return 0;
+}
+
 @end
 
 @interface CameraPlugin ()
